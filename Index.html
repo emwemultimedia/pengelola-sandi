@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengelola Kata Sandi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+  <!-- Header -->
+  <header class="bg-blue-600 text-white shadow-md sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+        <i class="ph ph-lock-key text-3xl"></i> Pengelola Akun
+      </h1>
+      <button onclick="openModal()" class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors shadow-sm">
+        <i class="ph ph-plus-circle text-xl"></i> <span class="hidden md:inline">Tambah Baru</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <div class="mb-8 relative">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <i class="ph ph-magnifying-glass text-slate-400 text-xl"></i>
+      </div>
+      <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Cari nama website, kategori, atau username..." class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all">
+    </div>
+
+    <!-- Loading State -->
+    <div id="loaderContainer" class="flex flex-col items-center justify-center py-12">
+      <div class="loader mb-4"></div>
+      <p class="text-slate-500">Memuat data dari server...</p>
+    </div>
+
+    <!-- Data Grid -->
+    <div id="dataGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center">
+      <i class="ph ph-folder-open text-6xl text-slate-300 mb-4"></i>
+      <h3 class="text-lg font-medium text-slate-900">Belum ada data</h3>
+      <p class="mt-1 text-slate-500">Mulai tambahkan akun dan kata sandi Anda.</p>
+    </div>
+  </main>
+
+  <!-- Modal Form -->
+  <div id="formModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 px-4 backdrop-blur-sm transition-opacity">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
+      <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <h3 id="modalTitle" class="text-lg font-semibold text-slate-800">Tambah Akun Baru</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+          <i class="ph ph-x text-2xl"></i>
+        </button>
+      </div>
+      
+      <form id="dataForm" onsubmit="handleFormSubmit(event)" class="p-6">
+        <input type="hidden" id="formId" name="id">
+        <div class="space-y-4">
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Nama App/Website *</label><input type="text" id="formNama" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Link URL</label><input type="url" id="formLink" placeholder="https://..." class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Kategori *</label>
+            <select id="formKategori" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+              <option value="Sosial Media">Sosial Media</option><option value="Pekerjaan">Pekerjaan</option><option value="Email">Email</option><option value="Keuangan">Keuangan</option><option value="Hiburan">Hiburan</option><option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Username / Email *</label><input type="text" id="formUsername" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+          <div><label class="block text-sm font-medium text-slate-700 mb-1">Password *</label>
+            <div class="relative"><input type="password" id="formPassword" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none pr-10">
+              <button type="button" onclick="togglePasswordVisibility('formPassword')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400"><i class="ph ph-eye text-xl" id="formPasswordEye"></i></button>
+            </div>
+          </div>
+        </div>
+        <div class="mt-8 flex gap-3">
+          <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 font-medium transition-colors">Batal</button>
+          <button type="submit" id="btnSubmit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex justify-center items-center gap-2">
+            <i class="ph ph-floppy-disk"></i> Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div id="deleteModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 px-4 backdrop-blur-sm transition-opacity">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all p-6 text-center">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph ph-warning-circle text-3xl text-red-600"></i></div>
+      <h3 class="text-xl font-bold text-slate-800 mb-2">Hapus Akun?</h3>
+      <p class="text-slate-500 mb-6">Apakah Anda yakin ingin menghapus akun ini? Tindakan ini tidak dapat dibatalkan.</p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium">Batal</button>
+        <button id="confirmDeleteBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium">Ya, Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-opacity duration-300 opacity-0 pointer-events-none z-50">
+    <i id="toastIcon" class="ph text-xl"></i><span id="toastMessage" class="font-medium"></span>
+  </div>
+
+  <script>
+    // ==========================================
+    // ⚠️ PENTING: Ganti URL di bawah dengan URL Deployment Web App Apps Script Anda
+    // ==========================================
+    const API_URL = "ISI_URL_WEB_APP_APPS_SCRIPT_DI_SINI"; 
+
+    let globalData = [];
+    let deleteIdTarget = null;
+
+    window.onload = function() {
+      fetchData();
+    };
+
+    function fetchData() {
+      showLoader(true);
+      if(API_URL === "ISI_URL_WEB_APP_APPS_SCRIPT_DI_SINI") {
+        showToast("Mohon masukkan API_URL di dalam kode!", "error");
+        showLoader(false);
+        return;
+      }
+
+      fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+          globalData = data;
+          renderData(data);
+          showLoader(false);
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+          showToast("Gagal memuat data!", "error");
+          showLoader(false);
+        });
+    }
+
+    function renderData(data) {
+      const grid = document.getElementById('dataGrid');
+      const emptyState = document.getElementById('emptyState');
+      grid.innerHTML = '';
+      
+      if (data.length === 0) {
+        grid.classList.add('hidden');
+        emptyState.classList.remove('hidden'); emptyState.classList.add('flex');
+        return;
+      }
+      grid.classList.remove('hidden');
+      emptyState.classList.add('hidden'); emptyState.classList.remove('flex');
+
+      data.forEach(item => {
+        const catColors = {"Sosial Media": "bg-pink-100 text-pink-700", "Pekerjaan": "bg-indigo-100 text-indigo-700", "Email": "bg-amber-100 text-amber-700", "Keuangan": "bg-emerald-100 text-emerald-700", "Hiburan": "bg-purple-100 text-purple-700", "Lainnya": "bg-slate-100 text-slate-700"};
+        const badgeColor = catColors[item.kategori] || catColors["Lainnya"];
+
+        const card = `
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 hover:shadow-md transition-shadow relative">
+            <div class="flex justify-between items-start mb-4">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800 line-clamp-1">${item.nama}</h3>
+                ${item.link ? `<a href="${item.link}" target="_blank" class="text-sm text-blue-500 hover:underline flex items-center gap-1 mt-1"><i class="ph ph-link"></i> Kunjungi</a>` : ''}
+              </div>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${badgeColor}">${item.kategori}</span>
+            </div>
+            <div class="space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
+              <div class="flex justify-between items-center overflow-hidden">
+                <div><p class="text-xs text-slate-500">Username/Email</p><p class="font-medium text-slate-800 text-sm">${item.username}</p></div>
+                <button onclick="copyToClipboard('${item.username}')" class="text-slate-400 hover:text-blue-600"><i class="ph ph-copy text-lg"></i></button>
+              </div>
+              <div class="flex justify-between items-center pt-2 border-t border-slate-200">
+                <div class="flex-1 overflow-hidden"><p class="text-xs text-slate-500">Password</p><input type="password" value="${item.password}" readonly class="bg-transparent font-medium text-slate-800 text-sm outline-none border-none p-0 w-full" id="pwd-${item.id}"></div>
+                <div class="flex gap-1">
+                  <button onclick="toggleCardPassword('pwd-${item.id}', this)" class="text-slate-400 hover:text-blue-600"><i class="ph ph-eye text-lg"></i></button>
+                  <button onclick="copyToClipboard('${item.password}')" class="text-slate-400 hover:text-blue-600"><i class="ph ph-copy text-lg"></i></button>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-3">
+              <button onclick='editData(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="text-sm px-3 py-1.5 text-slate-600 hover:text-blue-600 rounded-md"><i class="ph ph-pencil-simple"></i> Edit</button>
+              <button onclick="openDeleteModal('${item.id}')" class="text-sm px-3 py-1.5 text-slate-600 hover:text-red-600 rounded-md"><i class="ph ph-trash"></i> Hapus</button>
+            </div>
+          </div>`;
+        grid.insertAdjacentHTML('beforeend', card);
+      });
+    }
+
+    function filterData() {
+      const term = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = globalData.filter(item => item.nama.toLowerCase().includes(term) || item.kategori.toLowerCase().includes(term) || item.username.toLowerCase().includes(term));
+      renderData(filtered);
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      const btn = document.getElementById('btnSubmit');
+      btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Menyimpan...';
+      btn.disabled = true;
+
+      const formObject = {
+        id: document.getElementById('formId').value,
+        nama: document.getElementById('formNama').value,
+        link: document.getElementById('formLink').value,
+        kategori: document.getElementById('formKategori').value,
+        username: document.getElementById('formUsername').value,
+        password: document.getElementById('formPassword').value
+      };
+
+      const payload = {
+        action: formObject.id ? 'update' : 'create',
+        data: formObject
+      };
+
+      // Fetch POST untuk merubah data (text/plain menghindari masalah CORS)
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => handleResponse(res))
+      .catch(err => handleResponse({status: 'error'}));
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+      if (!deleteIdTarget) return;
+      closeDeleteModal(); showLoader(true);
+      
+      const payload = { action: 'delete', id: deleteIdTarget };
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => handleResponse(res))
+      .catch(err => handleResponse({status: 'error'}));
+    });
+
+    function handleResponse(response) {
+      closeModal();
+      if (response && response.status === 'success') {
+        showToast(response.message, "success");
+        fetchData(); 
+      } else {
+        showToast("Terjadi kesalahan sistem.", "error");
+        showLoader(false);
+      }
+      const btn = document.getElementById('btnSubmit');
+      btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Simpan';
+      btn.disabled = false;
+    }
+
+    // UTILITIES UI
+    function openModal() { document.getElementById('dataForm').reset(); document.getElementById('formId').value = ''; document.getElementById('modalTitle').innerText = 'Tambah Akun'; document.getElementById('formModal').classList.replace('hidden','flex'); }
+    function closeModal() { document.getElementById('formModal').classList.replace('flex','hidden'); }
+    function editData(item) { document.getElementById('formId').value = item.id; document.getElementById('formNama').value = item.nama; document.getElementById('formLink').value = item.link; document.getElementById('formKategori').value = item.kategori; document.getElementById('formUsername').value = item.username; document.getElementById('formPassword').value = item.password; document.getElementById('modalTitle').innerText = 'Edit Akun'; document.getElementById('formModal').classList.replace('hidden','flex'); }
+    function openDeleteModal(id) { deleteIdTarget = id; document.getElementById('deleteModal').classList.replace('hidden','flex'); }
+    function closeDeleteModal() { deleteIdTarget = null; document.getElementById('deleteModal').classList.replace('flex','hidden'); }
+    function showLoader(show) { document.getElementById('loaderContainer').classList.toggle('hidden', !show); document.getElementById('dataGrid').classList.toggle('hidden', show); document.getElementById('emptyState').classList.add('hidden'); }
+    function togglePasswordVisibility(id) { const input = document.getElementById(id); const icon = document.getElementById(id+'Eye'); if(input.type==="password"){input.type="text";icon.classList.replace('ph-eye','ph-eye-slash');}else{input.type="password";icon.classList.replace('ph-eye-slash','ph-eye');} }
+    function toggleCardPassword(id, btn) { const input = document.getElementById(id); const icon = btn.querySelector('i'); if(input.type==="password"){input.type="text";icon.classList.replace('ph-eye','ph-eye-slash');btn.classList.add('text-blue-600');}else{input.type="password";icon.classList.replace('ph-eye-slash','ph-eye');btn.classList.remove('text-blue-600');} }
+    function copyToClipboard(text) { const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast("Disalin!", "success"); }
+    function showToast(msg, type="success") { const t=document.getElementById('toast'); document.getElementById('toastMessage').innerText=msg; const i=document.getElementById('toastIcon'); if(type==="success"){t.className="fixed bottom-4 right-4 bg-emerald-600 text-white px-5 py-3 rounded-lg flex items-center gap-3 z-50 transition-opacity duration-300 opacity-100";i.className="ph ph-check-circle text-2xl";}else{t.className="fixed bottom-4 right-4 bg-red-600 text-white px-5 py-3 rounded-lg flex items-center gap-3 z-50 transition-opacity duration-300 opacity-100";i.className="ph ph-warning-circle text-2xl";} setTimeout(()=>t.classList.replace('opacity-100','opacity-0'),3000); }
+  </script>
+</body>
+</html>
