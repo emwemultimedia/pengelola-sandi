@@ -132,8 +132,7 @@
 
    function fetchData() {
       showLoader(true);
-
-      // Langsung tarik data saja, pengamannya sudah kita hapus
+      
       fetch(API_URL)
         .then(response => response.json())
         .then(data => {
