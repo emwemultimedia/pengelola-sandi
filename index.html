@@ -24,7 +24,31 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased">
 
-  <header class="bg-blue-600 text-white shadow-md sticky top-0 z-10">
+  <div id="loginScreen" class="fixed inset-0 z-[100] bg-slate-50 flex items-center justify-center transition-opacity duration-500">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm mx-4 border border-slate-100">
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="ph ph-shield-check text-4xl text-blue-600"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-800">Brankas Sandi</h2>
+        <p class="text-slate-500 text-sm mt-1">Masukkan password keamanan Anda</p>
+      </div>
+      
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="mb-6 relative">
+          <input type="password" id="loginPassword" placeholder="Password Rahasia" required
+                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none pr-10 transition-all font-medium">
+          <button type="button" onclick="togglePasswordVisibility('loginPassword')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-blue-600">
+            <i class="ph ph-eye text-xl" id="loginPasswordEye"></i>
+          </button>
+        </div>
+        <button type="submit" id="btnLogin" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors flex justify-center items-center gap-2 shadow-md hover:shadow-lg">
+          Masuk ke Brankas
+        </button>
+      </form>
+    </div>
+  </div>
+  <header class="bg-blue-600 text-white shadow-md sticky top-0 z-10 hidden" id="mainHeader">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
       <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
         <i class="ph ph-lock-key text-3xl"></i> Pengelola Akun
@@ -35,7 +59,7 @@
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main class="max-w-6xl mx-auto px-4 py-8 hidden" id="mainContent">
     <div class="mb-8 relative">
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
         <i class="ph ph-magnifying-glass text-slate-400 text-xl"></i>
@@ -43,7 +67,7 @@
       <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Cari nama website, kategori, atau username..." class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all">
     </div>
 
-    <div id="loaderContainer" class="flex flex-col items-center justify-center py-12">
+    <div id="loaderContainer" class="hidden flex-col items-center justify-center py-12">
       <div class="loader mb-4"></div>
       <p class="text-slate-500">Memuat data dari server...</p>
     </div>
@@ -111,34 +135,77 @@
 
   <script>
     // ==========================================
-    // ⚠️ PENTING: URL Deployment Web App Apps Script Anda
+    // URL API APPS SCRIPT ANDA
     // ==========================================
     const API_URL = "https://script.google.com/macros/s/AKfycbzSftKaEI4cMUBQ8q-up_69RW3T65Py6LJVOYU8EGPkc--fgkFtyZzvHeqgyGLKBfjPAQ/exec"; 
 
     let globalData = [];
     let deleteIdTarget = null;
+    let userPass = ""; 
 
-    window.onload = function() {
-      fetchData();
-    };
-
-    function fetchData() {
-      showLoader(true);
+    // FUNGSI LOGIN
+    function handleLogin(event) {
+      event.preventDefault();
       
-      fetch(API_URL)
+      const passInput = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnLogin');
+      
+      btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Memeriksa...';
+      btn.disabled = true;
+
+      userPass = passInput;
+
+      fetch(`${API_URL}?pass=${encodeURIComponent(userPass)}`)
+        .then(response => response.json())
+        .then(data => {
+          // Jika server membalas dengan status error (Password Salah)
+          if (data.status === "error") {
+            showToast("Password Salah!", "error");
+            userPass = ""; 
+            btn.innerHTML = 'Masuk ke Brankas';
+            btn.disabled = false;
+            document.getElementById('loginPassword').value = ''; 
+            document.getElementById('loginPassword').focus();
+            return;
+          }
+
+          // JIKA BERHASIL LOGIN
+          document.getElementById('loginScreen').classList.add('opacity-0');
+          setTimeout(() => {
+            document.getElementById('loginScreen').classList.replace('flex', 'hidden');
+            document.getElementById('mainHeader').classList.remove('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+          }, 300); 
+
+          globalData = data;
+          renderData(data);
+          showToast("Berhasil Masuk!", "success");
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showToast("Terjadi kesalahan jaringan", "error");
+          btn.innerHTML = 'Masuk ke Brankas';
+          btn.disabled = false;
+        });
+    }
+
+    // FUNGSI TARIK DATA ULANG (Setelah Tambah/Edit/Hapus)
+    function fetchDataSaja() {
+      showLoader(true);
+      fetch(`${API_URL}?pass=${encodeURIComponent(userPass)}`)
         .then(response => response.json())
         .then(data => {
           globalData = data;
           renderData(data);
-          showLoader(false); // Sembunyikan loading setelah data dirender
+          showLoader(false);
         })
         .catch(error => {
-          console.error('Error fetching data:', error);
           showToast("Gagal memuat data!", "error");
           showLoader(false);
         });
     }
     
+    // FUNGSI RENDER DATA KE LAYAR
     function renderData(data) {
       const grid = document.getElementById('dataGrid');
       const emptyState = document.getElementById('emptyState');
@@ -190,12 +257,14 @@
       });
     }
 
+    // FUNGSI PENCARIAN
     function filterData() {
       const term = document.getElementById('searchInput').value.toLowerCase();
       const filtered = globalData.filter(item => item.nama.toLowerCase().includes(term) || item.kategori.toLowerCase().includes(term) || item.username.toLowerCase().includes(term));
       renderData(filtered);
     }
 
+    // FUNGSI SIMPAN DATA (CREATE / UPDATE)
     function handleFormSubmit(event) {
       event.preventDefault();
       const btn = document.getElementById('btnSubmit');
@@ -212,6 +281,7 @@
       };
 
       const payload = {
+        pass: userPass, // Selalu kirim password
         action: formObject.id ? 'update' : 'create',
         data: formObject
       };
@@ -226,11 +296,13 @@
       .catch(err => handleResponse({status: 'error'}));
     }
 
+    // FUNGSI HAPUS DATA
     document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
       if (!deleteIdTarget) return;
-      closeDeleteModal(); showLoader(true);
+      closeDeleteModal(); 
+      showLoader(true);
       
-      const payload = { action: 'delete', id: deleteIdTarget };
+      const payload = { pass: userPass, action: 'delete', id: deleteIdTarget };
 
       fetch(API_URL, {
         method: 'POST',
@@ -242,13 +314,14 @@
       .catch(err => handleResponse({status: 'error'}));
     });
 
+    // HANDLE RESPON SERVER
     function handleResponse(response) {
       closeModal();
       if (response && response.status === 'success') {
         showToast(response.message, "success");
-        fetchData(); 
+        fetchDataSaja(); 
       } else {
-        showToast("Terjadi kesalahan sistem.", "error");
+        showToast(response.message || "Terjadi kesalahan sistem.", "error");
         showLoader(false);
       }
       const btn = document.getElementById('btnSubmit');
@@ -256,24 +329,25 @@
       btn.disabled = false;
     }
 
-    // UTILITIES UI
+    // UTILITIES & TAMPILAN
+    function showLoader(show) { 
+      const loader = document.getElementById('loaderContainer');
+      const grid = document.getElementById('dataGrid');
+      const emptyState = document.getElementById('emptyState');
+      if (show) {
+        loader.classList.remove('hidden'); loader.classList.add('flex');
+        grid.classList.add('hidden');
+        emptyState.classList.add('hidden'); emptyState.classList.remove('flex');
+      } else {
+        loader.classList.add('hidden'); loader.classList.remove('flex');
+      }
+    }
+    
     function openModal() { document.getElementById('dataForm').reset(); document.getElementById('formId').value = ''; document.getElementById('modalTitle').innerText = 'Tambah Akun'; document.getElementById('formModal').classList.replace('hidden','flex'); }
     function closeModal() { document.getElementById('formModal').classList.replace('flex','hidden'); }
     function editData(item) { document.getElementById('formId').value = item.id; document.getElementById('formNama').value = item.nama; document.getElementById('formLink').value = item.link; document.getElementById('formKategori').value = item.kategori; document.getElementById('formUsername').value = item.username; document.getElementById('formPassword').value = item.password; document.getElementById('modalTitle').innerText = 'Edit Akun'; document.getElementById('formModal').classList.replace('hidden','flex'); }
     function openDeleteModal(id) { deleteIdTarget = id; document.getElementById('deleteModal').classList.replace('hidden','flex'); }
     function closeDeleteModal() { deleteIdTarget = null; document.getElementById('deleteModal').classList.replace('flex','hidden'); }
-    
-    function showLoader(show) { 
-      const loader = document.getElementById('loaderContainer');
-      if (show) {
-        loader.classList.remove('hidden');
-        loader.classList.add('flex');
-      } else {
-        loader.classList.add('hidden');
-        loader.classList.remove('flex');
-      }
-    }
-    
     function togglePasswordVisibility(id) { const input = document.getElementById(id); const icon = document.getElementById(id+'Eye'); if(input.type==="password"){input.type="text";icon.classList.replace('ph-eye','ph-eye-slash');}else{input.type="password";icon.classList.replace('ph-eye-slash','ph-eye');} }
     function toggleCardPassword(id, btn) { const input = document.getElementById(id); const icon = btn.querySelector('i'); if(input.type==="password"){input.type="text";icon.classList.replace('ph-eye','ph-eye-slash');btn.classList.add('text-blue-600');}else{input.type="password";icon.classList.replace('ph-eye-slash','ph-eye');btn.classList.remove('text-blue-600');} }
     function copyToClipboard(text) { const el = document.createElement('textarea'); el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast("Disalin!", "success"); }
