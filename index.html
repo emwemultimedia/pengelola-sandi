@@ -130,13 +130,23 @@
       fetchData();
     };
 
-    function fetchData() {
+   function fetchData() {
       showLoader(true);
-      if(API_URL === "https://script.google.com/macros/s/AKfycbzSftKaEI4cMUBQ8q-up_69RW3T65Py6LJVOYU8EGPkc--fgkFtyZzvHeqgyGLKBfjPAQ/exec") {
-        showToast("Mohon masukkan API_URL di dalam kode!", "error");
-        showLoader(false);
-        return;
-      }
+
+      // Langsung tarik data saja, pengamannya sudah kita hapus
+      fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+          globalData = data;
+          renderData(data);
+          showLoader(false);
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+          showToast("Gagal memuat data!", "error");
+          showLoader(false);
+        });
+    }
 
       fetch(API_URL)
         .then(response => response.json())
