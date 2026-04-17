@@ -24,7 +24,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased">
 
-  <!-- Header -->
   <header class="bg-blue-600 text-white shadow-md sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
       <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
@@ -36,7 +35,6 @@
     </div>
   </header>
 
-  <!-- Main Content -->
   <main class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-8 relative">
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -45,16 +43,13 @@
       <input type="text" id="searchInput" onkeyup="filterData()" placeholder="Cari nama website, kategori, atau username..." class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all">
     </div>
 
-    <!-- Loading State -->
     <div id="loaderContainer" class="flex flex-col items-center justify-center py-12">
       <div class="loader mb-4"></div>
       <p class="text-slate-500">Memuat data dari server...</p>
     </div>
 
-    <!-- Data Grid -->
     <div id="dataGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
 
-    <!-- Empty State -->
     <div id="emptyState" class="hidden flex-col items-center justify-center py-16 text-center">
       <i class="ph ph-folder-open text-6xl text-slate-300 mb-4"></i>
       <h3 class="text-lg font-medium text-slate-900">Belum ada data</h3>
@@ -62,7 +57,6 @@
     </div>
   </main>
 
-  <!-- Modal Form -->
   <div id="formModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 px-4 backdrop-blur-sm transition-opacity">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all">
       <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -99,7 +93,6 @@
     </div>
   </div>
 
-  <!-- Delete Modal -->
   <div id="deleteModal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 px-4 backdrop-blur-sm transition-opacity">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform transition-all p-6 text-center">
       <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph ph-warning-circle text-3xl text-red-600"></i></div>
@@ -112,30 +105,56 @@
     </div>
   </div>
 
-  <!-- Toast -->
   <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-opacity duration-300 opacity-0 pointer-events-none z-50">
     <i id="toastIcon" class="ph text-xl"></i><span id="toastMessage" class="font-medium"></span>
   </div>
 
   <script>
     // ==========================================
-    // ⚠️ PENTING: Ganti URL di bawah dengan URL Deployment Web App Apps Script Anda
+    // ⚠️ URL Deployment Web App Apps Script Anda
     // ==========================================
     const API_URL = "https://script.google.com/macros/s/AKfycbzSftKaEI4cMUBQ8q-up_69RW3T65Py6LJVOYU8EGPkc--fgkFtyZzvHeqgyGLKBfjPAQ/exec"; 
 
     let globalData = [];
     let deleteIdTarget = null;
+    let userPass = ""; // Variabel untuk menyimpan password
 
     window.onload = function() {
       fetchData();
     };
 
- function fetchData() {
+    function showLoginModal() {
+      const pass = prompt("Aplikasi Terkunci.\nMasukkan Password Keamanan Anda:");
+      if (pass) {
+        userPass = pass;
+        fetchData();
+      } else {
+        document.body.innerHTML = "<div style='display:flex; height:100vh; align-items:center; justify-content:center; flex-direction:column; background-color:#f8fafc;'><i class='ph ph-lock-key' style='font-size:4rem; color:#94a3b8; margin-bottom:1rem;'></i><h1 style='font-size:1.5rem; font-weight:bold; color:#334155;'>Akses Ditolak</h1><p style='color:#64748b; margin-top:0.5rem;'>Refresh halaman untuk mencoba login kembali.</p></div>";
+      }
+    }
+
+    function fetchData() {
+      // Cek apakah password sudah diisi
+      if (!userPass) {
+        showLoginModal();
+        return;
+      }
+
       showLoader(true);
       
-      fetch(API_URL)
+      // Kirim password ke URL
+      fetch(`${API_URL}?pass=${encodeURIComponent(userPass)}`)
         .then(response => response.json())
         .then(data => {
+          // Tangkap error jika password dari server ditolak
+          if (data.status === "error") {
+            alert(data.message); // Menampilkan "Password Salah!"
+            userPass = ""; // Kosongkan password yang salah
+            showLoginModal(); // Minta login ulang
+            showLoader(false);
+            return;
+          }
+
           globalData = data;
           renderData(data);
           showLoader(false);
@@ -217,11 +236,11 @@
       };
 
       const payload = {
+        pass: userPass, // <--- Password disisipkan di sini
         action: formObject.id ? 'update' : 'create',
         data: formObject
       };
 
-      // Fetch POST untuk merubah data (text/plain menghindari masalah CORS)
       fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -236,7 +255,11 @@
       if (!deleteIdTarget) return;
       closeDeleteModal(); showLoader(true);
       
-      const payload = { action: 'delete', id: deleteIdTarget };
+      const payload = { 
+        pass: userPass, // <--- Password disisipkan di sini
+        action: 'delete', 
+        id: deleteIdTarget 
+      };
 
       fetch(API_URL, {
         method: 'POST',
@@ -254,7 +277,8 @@
         showToast(response.message, "success");
         fetchData(); 
       } else {
-        showToast("Terjadi kesalahan sistem.", "error");
+        // Tampilkan pesan error spesifik jika ditolak karena password
+        showToast(response.message || "Terjadi kesalahan sistem.", "error");
         showLoader(false);
       }
       const btn = document.getElementById('btnSubmit');
