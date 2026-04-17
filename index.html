@@ -130,7 +130,7 @@
       fetchData();
     };
 
-   function fetchData() {
+ function fetchData() {
       showLoader(true);
       
       fetch(API_URL)
@@ -146,20 +146,7 @@
           showLoader(false);
         });
     }
-
-      fetch(API_URL)
-        .then(response => response.json())
-        .then(data => {
-          globalData = data;
-          renderData(data);
-          showLoader(false);
-        })
-        .catch(error => {
-          console.error('Error fetching data:', error);
-          showToast("Gagal memuat data!", "error");
-          showLoader(false);
-        });
-
+    
     function renderData(data) {
       const grid = document.getElementById('dataGrid');
       const emptyState = document.getElementById('emptyState');
